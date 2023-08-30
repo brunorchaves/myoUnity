@@ -8,7 +8,7 @@ import numpy as np
 import math
 
 host, port = "127.0.0.1", 25001
-x, y, z = 1.0, 2.0, 3.0
+x, y, z,w = 1.0, 2.0, 3.0,4.0
 
 # SOCK_STREAM means TCP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,7 +62,7 @@ try:
                     quat_str= quat_str.split(', ')
                     qx, qy, qz ,qw= float(quat_str[0]), float(quat_str[1]), float(quat_str[2]),float(quat_str[3])
 
-                    data = "{},{},{}".format(qx, qy, qz)
+                    data = "{},{},{},{}".format(qx, qy, qz,qw)
                     sock.sendall(data.encode("utf-8"))
                     response = sock.recv(1024).decode("utf-8")
                     print(response)

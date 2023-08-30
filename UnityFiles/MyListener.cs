@@ -61,7 +61,7 @@ public class MyListener : MonoBehaviour
     }
 
     // Use-case specific function, need to re-write this to interpret whatever data is being sent
-    public static Vector3 ParseData(string dataString)
+    public static Vector4 ParseData(string dataString)
     {
         Debug.Log(dataString);
         // Remove the parentheses
@@ -74,7 +74,7 @@ public class MyListener : MonoBehaviour
         string[] stringArray = dataString.Split(',');
 
         // Store as a Vector3
-        Vector3 result = new Vector3(
+        Vector4 result = new Vector4(
             float.Parse(stringArray[0]),
             float.Parse(stringArray[1]),
             float.Parse(stringArray[2]));
@@ -84,7 +84,7 @@ public class MyListener : MonoBehaviour
     
 
     // Position is the data being received in this example
-    Vector3 position = Vector3.zero;
+    Vector4 position = Vector4.zero;
 
     void Update()
     {
