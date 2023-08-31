@@ -11,7 +11,6 @@ public class MyListener : MonoBehaviour
     TcpListener server;
     TcpClient client;
     bool running;
-    string dataReceived;
 
 
     void Start()
@@ -48,7 +47,7 @@ public class MyListener : MonoBehaviour
         int bytesRead = nwStream.Read(buffer, 0, client.ReceiveBufferSize);
 
         // Decode the bytes into a string
-        dataReceived = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+        string dataReceived = Encoding.UTF8.GetString(buffer, 0, bytesRead);
         
         // Make sure we're not getting an empty string
         //dataReceived.Trim();
@@ -61,7 +60,7 @@ public class MyListener : MonoBehaviour
     }
 
     // Use-case specific function, need to re-write this to interpret whatever data is being sent
-    public static Vector4 ParseData(string dataString)
+    public static Vector3 ParseData(string dataString)
     {
         Debug.Log(dataString);
         // Remove the parentheses
@@ -74,56 +73,20 @@ public class MyListener : MonoBehaviour
         string[] stringArray = dataString.Split(',');
 
         // Store as a Vector3
-        Vector4 result = new Vector4(
+        Vector3 result = new Vector3(
             float.Parse(stringArray[0]),
             float.Parse(stringArray[1]),
             float.Parse(stringArray[2]));
 
         return result;
     }
-    
 
     // Position is the data being received in this example
-    Vector4 position = Vector4.zero;
+    Vector3 position = Vector3.zero;
 
     void Update()
     {
-        string dataString =0;
-        dataString = dataReceived;
-        Debug.Log(dataString);
-
-        // Remove the parentheses
-        if (dataString.StartsWith("(") && dataString.EndsWith(")"))
-        {
-            dataString = dataString.Substring(1, dataString.Length - 2);
-        }
-
-        // Split the elements into an array
-        string[] stringArray = dataString.Split(',');
-        Debug.Log(stringArray[0]);
-        Debug.Log(stringArray[1]);
-        Debug.Log(stringArray[2]);
-        Debug.Log(stringArray[3]);
-        Debug.Log(stringArray[4]);
-        Debug.Log(stringArray[5]);
-        // // Store as a Vector3
-        // Vector3 gyro = new Vector3(
-        //     float.Parse(stringArray[0]),
-        //     float.Parse(stringArray[1]),
-        //     float.Parse(stringArray[2]));
-
-        // // Store as a Vector3
-        //  Vector3 accel = new Vector3(
-        //     float.Parse(stringArray[3]),
-        //     float.Parse(stringArray[4]),
-        //     float.Parse(stringArray[5]));
-
-        // // Calculate the rotation
-        // Quaternion gyroRotation = Quaternion.Euler(gyro * Time.deltaTime);
-        // Quaternion accelRotation = Quaternion.FromToRotation(transform.up, accel) * transform.rotation;
-        // Quaternion totalRotation = Quaternion.Lerp(gyroRotation, accelRotation, 0.5f);
-
-        // // Apply the rotation to the cube
-        // transform.rotation = totalRotation;
+        // Set this object's position in the scene according to the position received
+        transform.position = position;
     }
 }

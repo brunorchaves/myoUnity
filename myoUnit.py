@@ -1,13 +1,13 @@
 import multiprocessing
 from pyomyo import Myo, emg_mode
-import os
-import socket
-import time
+from quaternion import Quaternion
+from madgwickahrs import MadgwickAHRS
 import numpy as np
-host, port = "127.0.0.1", 25001
-data_ref = "0,0,0"
+import socket
+import os
+import time
 import math
-# from ahrs.filters import Madgwick
+
 def cls():
 	# Clear the screen in a cross platform way
 	# https://stackoverflow.com/questions/517970/how-to-clear-the-interpreter-console
@@ -15,7 +15,6 @@ def cls():
 
 # ------------ Myo Setup ---------------
 q = multiprocessing.Queue()
-
 def worker(q):
 	m = Myo(mode=emg_mode.FILTERED)
 	m.connect()
@@ -36,61 +35,53 @@ def worker(q):
 		m.run()
 	print("Worker Stopped")
 
-# -------- Main Program Loop -----------
+host, port = "127.0.0.1", 25001
+data = "1,2,3"
+
+ahrs_filter = MadgwickAHRS(sampleperiod=1/50, beta=None, zeta=None)
+roll, pitch, yaw=  str(5), str(6), str(7)
+data = "{},{},{}".format(roll, pitch,yaw)
+print (data)
+
+start_time = time.time()
+
 # SOCK_STREAM means TCP socket
-# Connect to the server and send the data
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# -------- Main Program Loop -----------
 
-    
-if __name__ == "__main__":
-	p = multiprocessing.Process(target=worker, args=(q,))
-	p.start()
-	start_time = time.time()
-	# sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	gx, gy, gz, ax, ay, az = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-	dt = 0.01  # time step in seconds
-	
-	try:
-		# sock.connect((host, port))
-		while True:
-			while not(q.empty()):
-				imu = list(q.get())
-				quat, acc, gyro = imu
-				# print("Quaternions:", quat)
-				# print("Acceleration:", acc)
-				# print("Gyroscope:", gyro)
-				# data = str(acc)+","+str(gyro)
-				gyro_str = str(gyro)
-				acc_str = str(acc)
-				quat_str=str(quat)
+try:
+	sock.connect((host, port))
+	if __name__ == "__main__":
+		p = multiprocessing.Process(target=worker, args=(q,))
+		p.start()
+		while 1:
+				while not(q.empty()):
+					imu = list(q.get())
+					quat, acc, gyro = imu
+					# print("Quaternions:", quat)
+					# print("Acceleration:", acc)
+					# print("Gyroscope:", gyro)
+					accelerometer_data = np.array(acc)  
+					gyroscope_data = np.array(gyro)  
+					acc_rescaled = accelerometer_data/2048
+					gyro_rescaled= gyroscope_data/16  
+					magnitude = np.linalg.norm(acc_rescaled)
+					acc_units = acc_rescaled / magnitude  # normalized
+					gyro_units= gyro_rescaled*0.01745329251 
+					ahrs_filter.update_imu(gyro_units, acc_units)
+					estimated_orientation = ahrs_filter.quaternion
+					euler_angles_radians = estimated_orientation.to_euler_angles()
+					euler_angles_degrees = np.array(euler_angles_radians)* (180.0 / np.pi)
+					# print("Euler Angles (Roll, Pitch, Yaw):", euler_angles_degrees)
+					roll = int(euler_angles_degrees[0])
+					pitch = int(euler_angles_degrees[1])
+					yaw = int(euler_angles_degrees[2])
+					data = "{},{},{}".format(roll, pitch,yaw)
+					print(str(roll)+" "+str(pitch)+" "+str(yaw))
+					sock.sendall(data.encode("utf-8"))
+					response = sock.recv(1024).decode("utf-8")
+					print (response)
+					time.sleep(0.01)
 
-				gyro_str = gyro_str.strip('()') # remove parentheses
-				gyro_str= gyro_str.split(', ')
-				gx, gy, gz = float(gyro_str[0]), float(gyro_str[1]), float(gyro_str[2])
-
-				acc_str = acc_str.strip('()') # remove parentheses
-				acc_str= acc_str.split(', ')
-				ax, ay, az = float(acc_str[0]), float(acc_str[1]), float(acc_str[2])
-
-				quat_str = quat_str.strip('()') # remove parentheses
-				quat_str= quat_str.split(', ')
-				qx, qy, qz ,qw= float(quat_str[0]), float(quat_str[1]), float(quat_str[2]),float(quat_str[3])
-
-				gyro_data = np.array([gx, gy, gz])
-				accel_data = np.array([ax, ay, az])
-				q_gyro = np.concatenate(([0], gyro_data))
-
-				# Get the Euler angles from the filter
-				# roll, pitch, yaw = filter.quaternion.to_euler(degrees=True)
-
-				# print("Roll: {:.2f} degrees".format(roll))
-				# print("Pitch: {:.2f} degrees".format(pitch))
-				print("qx: " + str(qx))
-
-	except KeyboardInterrupt:
-		print("Quitting")
-		quit()
-	# finally:
-		# sock.close()
-
-		
-
+finally:
+	sock.close()
