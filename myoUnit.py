@@ -7,6 +7,9 @@ import socket
 import os
 import time
 import math
+import math
+
+
 
 def cls():
 	# Clear the screen in a cross platform way
@@ -61,8 +64,10 @@ try:
 					# print("Quaternions:", quat)
 					# print("Acceleration:", acc)
 					# print("Gyroscope:", gyro)
+					quaternion_data = np.array(quat)  
 					accelerometer_data = np.array(acc)  
 					gyroscope_data = np.array(gyro)  
+					quaternion_reescaled = quaternion_data/16384.0
 					acc_rescaled = accelerometer_data/2048
 					gyro_rescaled= gyroscope_data/16  
 					magnitude = np.linalg.norm(acc_rescaled)
@@ -73,15 +78,59 @@ try:
 					euler_angles_radians = estimated_orientation.to_euler_angles()
 					euler_angles_degrees = np.array(euler_angles_radians)* (180.0 / np.pi)
 					# print("Euler Angles (Roll, Pitch, Yaw):", euler_angles_degrees)
-					roll = int(euler_angles_degrees[0])
-					pitch = int(euler_angles_degrees[1])
-					yaw = int(euler_angles_degrees[2])
-					data = "{},{},{}".format(roll, pitch,yaw)
-					print(str(roll)+" "+str(pitch)+" "+str(yaw))
+					
+					#Euler angles - madwick and mahony filter
+					# roll = int(euler_angles_degrees[0])
+					# pitch = int(euler_angles_degrees[1])
+					# yaw = int(euler_angles_degrees[2])
+					
+
+					#Quaternions - from hardware 
+					qw = quaternion_reescaled[0]
+					qx = quaternion_reescaled[1]
+					qy = quaternion_reescaled[2]
+					qz = quaternion_reescaled[3]
+
+
+
+					# data = "{},{},{}".format(qw, qx,qy,qz)
+					def euler_from_quaternion(x, y, z, w):
+						"""
+						Convert a quaternion into euler angles (roll, pitch, yaw)
+						roll is rotation around x in radians (counterclockwise)
+						pitch is rotation around y in radians (counterclockwise)
+						yaw is rotation around z in radians (counterclockwise)
+						"""
+						t0 = +2.0 * (w * x + y * z)
+						t1 = +1.0 - 2.0 * (x * x + y * y)
+						roll_x = math.atan2(t0, t1)
+					
+						t2 = +2.0 * (w * y - z * x)
+						t2 = +1.0 if t2 > +1.0 else t2
+						t2 = -1.0 if t2 < -1.0 else t2
+						pitch_y = math.asin(t2)
+					
+						t3 = +2.0 * (w * z + x * y)
+						t4 = +1.0 - 2.0 * (y * y + z * z)
+						yaw_z = math.atan2(t3, t4)
+					
+						return roll_x, pitch_y, yaw_z # in radians
+
+					
+					roll, pitch, yaw = euler_from_quaternion( qx, qy, qz, qw)
+
+					roll_deg = int(roll*(180/(math.pi)))
+					pitch_deg = int(pitch*(180/(math.pi)))
+					yaw_deg = int(yaw*(180/(math.pi)))
+					print(f"Roll (degrees): {roll_deg}")
+					print(f"Pitch (degrees): {pitch_deg}")
+					print(f"Yaw (degrees): {yaw_deg}")
+					data = "{},{},{}".format(roll_deg, yaw_deg,pitch_deg)
+					# print(str(roll_deg)+" "+str(pitch)+" "+str(yaw))
 					sock.sendall(data.encode("utf-8"))
 					response = sock.recv(1024).decode("utf-8")
 					print (response)
-					time.sleep(0.01)
+					# time.sleep(0.01)
 
 finally:
 	sock.close()
